@@ -4,32 +4,19 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 # 1. CONFIGURATION
-# List of your data files and the titles for the graphs
-DATA_FOLDER = Path(r"C:\Users\narwh\Downloads\Science Fair\actual stuff")
+# Set to current directory since we run from within 'actual stuff'
+DATA_FOLDER = Path(".")
 
-datasets = [
-    {
-        "file": DATA_FOLDER /"science_fair_averages_apoe3_edit.csv",
-        "title": "APOE 3/3 (Control): Atrophy Heatmap",
-        "save_as": "heatmap_apoe3.png"
-    },
-    {
-        "file": DATA_FOLDER /"science_fair_averages_apoe34.csv",
-        "title": "APOE 3/4 (Heterozygous): Atrophy Heatmap",
-        "save_as": "heatmap_apoe34.png"
-    },
-    {
-        "file": DATA_FOLDER /"science_fair_averages_apoe4.csv",
-        "title": "APOE 4/4 (Homozygous): Atrophy Heatmap",
-        "save_as": "heatmap_apoe44.png"
-    }
-]
 
-def generate_heatmap(config):
+def generate_heatmap(full_df, config):
     try:
-        # Load Data
-        df = pd.read_csv(config["file"])
+        # Filter by Genotype
+        df = full_df[full_df["Genotype"] == config["genotype"]]
         
+        if df.empty:
+            print(f"WARNING: No data found for genotype {config['genotype']}")
+            return
+
         # Pivot Data: Rows=Cromolyn, Cols=Lecanemab, Values=Atrophy
         heatmap_data = df.pivot(
             index="Cromolyn_mg_kg", 
@@ -44,14 +31,12 @@ def generate_heatmap(config):
         plt.figure(figsize=(10, 8))
         
         # Create Heatmap
-        # cmap="RdYlGn_r" means: Red = High (Bad), Green = Low (Good)
-        # annot=True shows the numbers in the boxes
         ax = sns.heatmap(
             heatmap_data, 
             annot=True, 
             fmt=".1f", 
             cmap="RdYlGn_r", 
-            vmin=5, vmax=35, # Fix color scale across all 3 charts for fair comparison
+            vmin=10, vmax=35, # Adjusted for better contrast
             cbar_kws={'label': 'Neuron Atrophy (%)'}
         )
         
@@ -66,14 +51,39 @@ def generate_heatmap(config):
         
         print(f"Successfully created: {config['save_as']}")
         
-    except FileNotFoundError:
-        print(f"ERROR: Could not find file '{config['file']}'. Check your folder.")
-    except KeyError:
-        print(f"ERROR: Columns missing in '{config['file']}'. Check the CSV format.")
+    except Exception as e:
+        print(f"ERROR generating {config['save_as']}: {e}")
 
-# Run the generator for all 3 files
+# Run the generator
 print("--- Generating Science Fair Heatmaps ---")
-sns.set_context("talk") # Makes fonts larger for posters
-for data in datasets:
-    generate_heatmap(data)
+sns.set_context("talk") 
+
+# Load the single unified CSV
+csv_path = DATA_FOLDER / "science_fair_averages.csv"
+if csv_path.exists():
+    master_df = pd.read_csv(csv_path)
+    
+    datasets = [
+        {
+            "genotype": "APOE3",
+            "title": "APOE 3/3 (Control): Atrophy Heatmap",
+            "save_as": "heatmap_apoe3.png"
+        },
+        {
+            "genotype": "APOE4",
+            "title": "APOE 4/4 (Homozygous): Atrophy Heatmap",
+            "save_as": "heatmap_apoe44.png"
+        },
+        {
+            "genotype": "TREM2 R47H",
+            "title": "TREM2 R47H: Atrophy Heatmap",
+            "save_as": "heatmap_trem2.png"
+        }
+    ]
+
+    for data in datasets:
+        generate_heatmap(master_df, data)
+else:
+    print(f"ERROR: '{csv_path}' not found. Run the data collect script first.")
+
 print("Done!")
