@@ -8,8 +8,10 @@ import sys
 # Ensure your simulation file is named 'model.py'
 try:
     from try_again import ADModel
-except ImportError:
-    print("Error: Could not import ADModel. Make sure your model file is named 'try_again.py' and is in the same folder.")
+except ImportError as e:
+    print(f"Error: Could not import ADModel. Detail: {e}")
+    import traceback
+    traceback.print_exc()
     sys.exit(1)
 
 # --- 1. EXPERIMENTAL CONFIGURATION ---
@@ -93,7 +95,8 @@ def run_experiments():
                         genetic_overrides=overrides,
                         lecanemab_dose=lec,
                         cromolyn_dose=cro,
-                        max_steps=MAX_STEPS
+                        max_steps=MAX_STEPS,
+                        seed=374281 + rep  # <--- FIXED SEEDING: Controlled randomness per replicate
                     )
                     
                     # Run Simulation
